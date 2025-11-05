@@ -1,1 +1,68 @@
-this is a my first file
+---
+- name: Simple VM Health Check
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+
+    - name: Display basic system info
+      ansible.builtin.shell: |
+        echo "===== VM HEALTH CHECK STARTED ====="
+        echo "Hostname: $(hostname)"
+        echo "Uptime: $(uptime -p)"
+      register: basic_info
+
+    - name: Show basic info
+      ansible.builtin.debug:
+        msg: "{{ basic_info.stdout_lines }}"
+
+    - name: Show CPU and memory details
+      ansible.builtin.shell: |
+        echo "CPU Cores: $(nproc)"
+        free -h | grep -E 'Mem|Swap'
+      register: cpu_mem
+
+    - name: Display CPU and memory details
+      ansible.builtin.debug:
+        msg: "{{ cpu_mem.stdout_lines }}"
+
+    - name: Show disk usage
+      ansible.builtin.shell: df -hT | grep -E '^/dev/'
+      register: disk_usage
+
+    - name: Display disk usage
+      ansible.builtin.debug:
+        msg: "{{ disk_usage.stdout_lines }}"
+
+    - name: Check internet connectivity
+      ansible.builtin.shell: |
+        if ping -c 2 8.8.8.8 > /dev/null 2>&1; then
+          echo "Internet Connectivity: OK"
+        else
+          echo "Internet Connectivity: FAILED"
+        fi
+      register: net_check
+
+    - name: Display network connectivity
+      ansible.builtin.debug:
+        msg: "{{ net_check.stdout_lines }}"
+
+    - name: Check cloud agent status
+      ansible.builtin.shell: |
+        if systemctl is-active --quiet waagent; then
+          echo "Agent Status: Azure Agent Active"
+        elif systemctl is-active --quiet cloud-init; then
+          echo "Agent Status: Cloud-Init Active"
+        else
+          echo "Agent Status: No Known Agent Running"
+        fi
+      register: agent_status
+
+    - name: Display agent status
+      ansible.builtin.debug:
+        msg: "{{ agent_status.stdout_lines }}"
+
+    - name: Print completion message
+      ansible.builtin.debug:
+        msg: "===== VM HEALTH CHECK COMPLETED ====="
